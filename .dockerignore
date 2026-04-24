@@ -1,0 +1,33 @@
+.git
+.gitignore
+.venv
+**/__pycache__
+**/*.pyc
+**/*.pyo
+**/.pytest_cache
+**/.mypy_cache
+**/.ruff_cache
+
+# Don't ship secrets or host-built artifacts into any image
+.env
+*.env.local
+
+# Host-built frontend output (frontend image rebuilds it)
+fe/node_modules
+fe/dist
+fe/.vite
+
+# Host-built ChromaDB and model artifacts (populated via volumes at runtime)
+chroma_db
+training/model
+
+# Notebooks and raw zipped dataset (training reads data/sample_amazonhelp.csv)
+notebook.ipynb
+data/customer-support-on-twitter.zip
+be/dataset_extracted
+
+# IDE / OS
+.vscode
+.idea
+.DS_Store
+Thumbs.db

@@ -1,0 +1,74 @@
+name: decision-assistant
+
+services:
+  # One-shot init: trains the Random Forest and seeds ChromaDB on first run.
+  # On later runs it finds artifacts in the named volumes and exits quickly.
+  ml:
+    build:
+      context: .
+      dockerfile: training/Dockerfile
+    image: decision-assistant-ml:latest
+    container_name: da-ml
+    env_file:
+      - .env
+    environment:
+      PYTHONUNBUFFERED: "1"
+    volumes:
+      - model-artifacts:/app/training/model
+      - chroma-data:/app/chroma_db
+      - ml-logs:/app/logs
+    networks:
+      - da-net
+    restart: "no"
+
+  # FastAPI service (RAG + LLM + ML inference).
+  backend:
+    build:
+      context: .
+      dockerfile: be/Dockerfile
+    image: decision-assistant-backend:latest
+    container_name: da-backend
+    env_file:
+      - .env
+    environment:
+      CORS_ORIGINS: "http://localhost:8080,http://127.0.0.1:8080,http://localhost:5173,http://127.0.0.1:5173"
+    volumes:
+      - model-artifacts:/app/training/model:ro
+      - chroma-data:/app/chroma_db
+      - backend-logs:/app/logs
+    ports:
+      - "8000:8000"
+    depends_on:
+      ml:
+        condition: service_completed_successfully
+    networks:
+      - da-net
+    restart: unless-stopped
+
+  # React SPA served by `vite preview`; proxies /api/* to the backend service
+  # (see preview.proxy in fe/vite.config.ts).
+  frontend:
+    build:
+      context: ./fe
+      dockerfile: Dockerfile
+    image: decision-assistant-frontend:latest
+    container_name: da-frontend
+    environment:
+      VITE_DEV_API_PROXY: "http://backend:8000"
+    depends_on:
+      - backend
+    ports:
+      - "8080:4173"
+    networks:
+      - da-net
+    restart: unless-stopped
+
+volumes:
+  model-artifacts:
+  chroma-data:
+  ml-logs:
+  backend-logs:
+
+networks:
+  da-net:
+    driver: bridge

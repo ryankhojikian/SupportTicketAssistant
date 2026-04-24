@@ -1,0 +1,150 @@
+AIE BOOTCAMP · WEEK 3 PROJECT BRIEF
+Decision Intelligence Assistant
+Retrieval-Augmented Generation, an ML Baseline, and Containerized Delivery
+
+You are building a knowledge assistant with a source panel and two priority predictors on top of
+real customer support data. The system must answer user questions, retrieve relevant past cases using
+RAG, predict ticket priority with both a trained ML model and an LLM, and let the user compare
+everything that comes out — in quality, in cost, and in latency.
+This is the week you stop treating the LLM as a magic box. The real question this project forces you to
+answer is: when is a cheap specialized model worth more than an expensive general one? A
+trained classifier running in 2ms for free is not the same product as a 90%-accurate LLM call costing
+$0.001 at 800ms. You are going to build both, measure both, and defend your choice.
+Your deliverable is a working full-stack application — backend, frontend, and vector store —
+orchestrated through Docker Compose so every piece starts with a single command.
+DATASET
+Customer Support on Twitter — a large public dataset of real support conversations from major brands.
+kaggle.com/datasets/thoughtvector/customer-support-on-twitter
+Filter the conversations and treat each tweet as a support ticket. The dataset is noisy, unbalanced, and
+contains real language — exactly what you will face in production.
+WHAT YOU NEED TO BUILD
+1. Data Preparation
+• Clean and preprocess the dataset
+• Define a priority label (e.g. urgent vs normal) — the dataset does not come with one. You will invent
+a labeling rule (keywords, sentiment, length, punctuation, or a mix) and apply it across the data.
+• Split text into chunks for retrieval
+• Generate embeddings for the RAG system
+• Prepare a separate tabular dataset for the ML baseline
+Be honest about what you are doing. If your rule is "contains the word refund OR has 3+ exclamation
+marks", your model will partly learn to reproduce that rule. That is not a failure — it is called weak
+supervision, and it is how most real production labels get created. But you must document your labeling
+function clearly and acknowledge this in your notebook. Reviewers will ask: "is your model learning about
+urgency, or learning your regex?" Have an answer ready.
+2. Retrieval System (RAG)
+• Store embeddings in a vector database (Chroma, Qdrant, Weaviate, or pgvector)
+• Retrieve top-k similar tickets based on a query
+• Pass retrieved context to the LLM in a structured way
+
+• Return the retrieved tickets alongside the answer so the user can inspect them
+3. Generation (LLM)
+• Generate answers with RAG (context from retrieved tickets)
+• Generate answers without RAG (the LLM alone)
+• Compare the quality of both answers — not just visually, but with a written analysis
+4. Feature Engineering and ML Baseline
+Create meaningful input features to predict ticket priority. Examples:
+• text length and word count
+• presence of urgency keywords (refund, broken, cancel, down, help)
+• punctuation signals (exclamation marks, ALL-CAPS ratio)
+• sentiment score, readability score, or time-of-day features
+• any others you can justify
+Then:
+• Train several ML models to predict ticket priority (not just one)
+• Compare their metrics with a proper evaluation strategy
+• Choose the best model and explain why
+5. Comparison — The Whole Point
+This is the core exercise of the week. For every query, you will produce and compare four outputs:
+• the RAG answer (LLM + retrieved context)
+• the non-RAG answer (LLM alone)
+• the ML priority prediction (your trained classifier, with confidence)
+• the LLM zero-shot priority prediction (ask the LLM "is this urgent?" directly)
+For the two priority predictors, measure and report three things per call:
+• accuracy on your test set
+• latency (wall-clock milliseconds)
+• cost (the LLM's per-call cost in $; the ML model's cost is effectively zero — say so)
+Then answer the question that matters: at 10,000 tickets per hour, which would you deploy, and why?
+The LLM will probably win on accuracy. The trained model will win on cost and latency by orders of
+magnitude. Your job is not to pick a winner — it is to reason about the tradeoff and defend your
+recommendation.
+6. Logging
+Track every query so you can debug and evaluate later:
+• the user query
+• the retrieved results and their similarity scores
+• the output from each system (RAG, non-RAG, ML, LLM zero-shot)
+• latency and cost for every LLM call
+• any errors
+7. Frontend (React)
+
+Build a simple UI with:
+• an input box for the user query
+• an answer display
+• a source panel showing the retrieved tickets
+• a comparison section (RAG vs non-RAG vs ML vs LLM zero-shot) — show accuracy, latency, and
+cost side by side
+Vibe-code the styling if you want — but the logic must be yours.
+DEPLOYMENT & ORCHESTRATION
+This project has multiple moving parts. You will not run them with three terminal windows and hope for the
+best.
+Every service runs in its own container, and all of them are started together using Docker Compose. At
+minimum your docker-compose.yml must define:
+• backend — your FastAPI service (RAG, LLM, ML endpoints)
+• frontend — your React application
+• vector-db — if your chosen vector store runs as a separate service (Qdrant, Weaviate, pgvector...). If
+you use an in-process store (Chroma persistent mode, FAISS), this service is optional — but you must
+justify the choice.
+The entire stack must come up with a single command:
+$ docker compose up --build
+Requirements:
+• use a shared Docker network so services can talk to each other by name (not localhost)
+• persist your vector store and logs with named volumes so data survives restarts
+• load secrets and config via environment variables and a .env file (never hardcode keys)
+• expose only the ports you actually need
+• write a README section that explains how to run, stop, and rebuild the stack
+EXTRAS (BONUS)
+• Visualize embeddings using PCA or t-SNE
+• Compare raw text features vs engineered features for the ML baseline
+• Highlight when RAG fails because of low similarity (and explain your threshold)
+• Show a confidence score for each output
+PROJECT FLOW
+1 Ask Question User types a query in the UI
+2 Retrieve Similar Cases Top-k tickets pulled from the vector store
+3 Generate Answers RAG + non-RAG responses produced in parallel
+4 Extract Features Engineered features computed from the query
+
+5 Predict Priority (ML) Trained classifier returns label + confidence
+6 Predict Priority (LLM) Zero-shot LLM prediction for comparison
+7
+Show Four-Way
+Comparison Answers, sources, predictions, accuracy, latency, cost
+8 Reason & Recommend Student defends which priority predictor to deploy
+EXPECTED OUTCOME
+At the end you should have:
+• a working AI assistant with a React frontend and FastAPI backend
+• a retrieval system backed by a real vector store
+• an ML baseline trained on engineered features, with a documented labeling function
+• a four-way comparison across RAG, non-RAG, ML, and LLM zero-shot — with accuracy, latency, and
+cost
+• a written recommendation: which priority predictor would you deploy in production, and why?
+• a docker-compose.yml that brings the whole stack up with one command
+• a README a stranger could follow to run your project in under five minutes
+DELIVERABLES
+Submit a single repository link containing everything below.
+• notebook.ipynb — EDA, labeling logic, feature engineering, model comparison
+• backend/ — FastAPI service with clearly separated routers, schemas, and utilities
+• frontend/ — React app (input box, answer display, source panel, comparison section)
+• docker-compose.yml — orchestrates backend, frontend, and vector store (if separate)
+• Dockerfile in each service directory (no copy-pasted files you don't understand)
+• .env.example — every variable your stack needs, with dummy values
+• README.md — how to run, architecture diagram, design decisions, known limitations
+• logs/ or a logging setup that actually captures queries, retrievals, and outputs
+RULES
+
+■ NO HALLUCINATED METRICS
+Every number you report — accuracy, similarity, latency — must come from code you actually ran. If you
+cannot point to the cell or log line that produced it, it does not exist.
+
+■ NO DISHONEST ACCURACY
+If your ML model scores 95% accuracy, ask yourself "is it learning urgency, or is it learning my labeling
+regex?" A model that perfectly reproduces its training rule is not impressive — it is the expected outcome.
+Report what the model actually does, not what you wish it did.
+
+One command. docker compose up --build. Everything works.

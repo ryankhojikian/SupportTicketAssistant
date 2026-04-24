@@ -1,0 +1,6 @@
+textblob
+joblib
+scikit-learn
+pandas
+numpy
+chromadb

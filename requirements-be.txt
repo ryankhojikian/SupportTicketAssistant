@@ -1,0 +1,11 @@
+fastapi
+uvicorn
+pydantic
+textblob
+joblib
+scikit-learn
+pandas
+numpy
+chromadb
+google-generativeai
+python-dotenv
