@@ -11,8 +11,9 @@ _TRIAGE_RULES = (
 )
 
 _PRIORITY_TAIL = (
-    "On the last line, write exactly one of: PRIORITY: Urgent or PRIORITY: Normal "
-    "(must match the first line)."
+    "On the second-to-last line, write exactly one of: PRIORITY: Urgent or PRIORITY: Normal "
+    "(must match the first line).\n"
+    "On the very last line, write: CONFIDENCE: X% where X is your certainty as an integer (e.g. CONFIDENCE: 82%)."
 )
 
 
@@ -21,8 +22,10 @@ def build_llm_prompts(tweet: str, rag_context: str) -> dict[str, str]:
     ctx = rag_context or "(no context retrieved)"
     return {
         "llm_zero_shot": (
-           "Is this customer support tweet Urgent or Normal? "
-            "Reply with exactly one word: Urgent or Normal.\n\n"
+            "Is this customer support tweet Urgent or Normal?\n"
+            "Reply with exactly two lines:\n"
+            "Line 1: Urgent or Normal\n"
+            "Line 2: CONFIDENCE: X% (your certainty as an integer, e.g. CONFIDENCE: 82%)\n\n"
             f"Tweet: {tweet}"
         ),
         "llm_non_rag": (

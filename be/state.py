@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from typing import Any
 
 import joblib
@@ -27,3 +28,13 @@ def init_ml_state() -> None:
                 ml_state[f"{name}_error"] = str(e)
         else:
             ml_state[name] = None
+
+    metrics_path = MODEL_DIR / "metrics.json"
+    if metrics_path.is_file():
+        try:
+            with open(metrics_path) as f:
+                ml_state["metrics"] = json.load(f)
+        except Exception:  # pragma: no cover
+            ml_state["metrics"] = None
+    else:
+        ml_state["metrics"] = None

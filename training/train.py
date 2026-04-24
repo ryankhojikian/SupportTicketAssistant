@@ -1,3 +1,4 @@
+import json
 import sys
 from pathlib import Path
 
@@ -178,6 +179,19 @@ report_b = classification_report(y_test_nk, rf_preds_nk)
 print(f"Accuracy: {acc_b:.4f}")
 print(f"Latency (ms per ticket): {latency_b:.4f}")
 print("Classification Report:\n" + report_b)
+
+# Persist test-set accuracy so the backend can display it without re-running training
+metrics_path = os.path.join(MODEL_DIR, 'metrics.json')
+with open(metrics_path, 'w') as _mf:
+    json.dump(
+        {
+            "ml_test_accuracy": float(acc_a),
+            "ml_test_accuracy_no_kw": float(acc_b),
+        },
+        _mf,
+        indent=2,
+    )
+print(f"\nSaved test-set metrics to {metrics_path}")
 
 # ── Side-by-side summary ──────────────────────────────────────────────────────
 print("\n" + "="*70)

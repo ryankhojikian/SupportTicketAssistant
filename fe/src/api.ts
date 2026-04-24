@@ -22,6 +22,7 @@ export interface SummaryRow {
   confidence: number | null;
   latency_ms: number;
   cost_usd: number;
+  test_accuracy: number | null;
   error: string | null;
 }
 

@@ -526,9 +526,9 @@ export default function App() {
               <section className="section">
                 <h2>Four-way comparison</h2>
                 <p className="muted section-desc">
-                  Per-call latency and cost come from this request. Aggregate test-set accuracy for
-                  each system is produced offline in your training notebook and logs — it is not
-                  recomputed on every query.
+                  Per-call latency and cost come from this request. ML test-set accuracy is saved
+                  when training runs and loaded at startup. LLM confidence is self-reported by the
+                  model per call; LLMs have no offline test-set evaluation.
                 </p>
                 <div className="table-wrap">
                   <table className="compare-table">
@@ -555,7 +555,11 @@ export default function App() {
                           </td>
                           <td className="mono">{row.latency_ms.toFixed(1)}</td>
                           <td className="mono">{formatUsd(row.cost_usd)}</td>
-                          <td className="muted">—</td>
+                          <td className="mono">
+                            {row.test_accuracy != null
+                              ? `${(row.test_accuracy * 100).toFixed(1)}%`
+                              : "—"}
+                          </td>
                           <td className="error-cell">{row.error ?? "—"}</td>
                         </tr>
                       ))}

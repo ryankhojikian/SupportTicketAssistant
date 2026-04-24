@@ -57,6 +57,17 @@ def extract_priority_from_text(text: str) -> str | None:
     return None
 
 
+def extract_confidence_from_text(text: str) -> float | None:
+    """Parse a CONFIDENCE: X% line from an LLM response into a 0–1 float."""
+    if not text:
+        return None
+    m = re.search(r"CONFIDENCE:\s*(\d+(?:\.\d+)?)\s*%", text, re.IGNORECASE)
+    if not m:
+        return None
+    val = float(m.group(1)) / 100.0
+    return round(min(max(val, 0.0), 1.0), 4)
+
+
 def build_ml_features(query_raw: str) -> tuple[np.ndarray | None, str | None]:
     rf = ml_state.get("rf")
     tfidf = ml_state.get("tfidf")
@@ -135,6 +146,7 @@ def _serialize_chroma(raw: dict[str, Any] | None) -> dict[str, Any]:
 
 
 def _finalize_response(tweet: str, results: dict[str, Any]) -> dict[str, Any]:
+    ml_test_acc: float | None = (ml_state.get("metrics") or {}).get("ml_test_accuracy")
     rows = [
         {
             "system": "ML (Random Forest)",
@@ -142,30 +154,34 @@ def _finalize_response(tweet: str, results: dict[str, Any]) -> dict[str, Any]:
             "confidence": results["ml"].get("confidence"),
             "latency_ms": results["ml"]["latency_ms"],
             "cost_usd": results["ml"]["cost_usd"],
+            "test_accuracy": ml_test_acc,
             "error": results["ml"].get("error"),
         },
         {
             "system": "LLM zero-shot",
             "priority": results["llm_zero_shot"].get("label"),
-            "confidence": None,
+            "confidence": results["llm_zero_shot"].get("confidence"),
             "latency_ms": results["llm_zero_shot"]["latency_ms"],
             "cost_usd": results["llm_zero_shot"]["cost_usd"],
+            "test_accuracy": None,
             "error": results["llm_zero_shot"].get("error"),
         },
         {
             "system": "LLM non-RAG",
             "priority": results["llm_non_rag"].get("label"),
-            "confidence": None,
+            "confidence": results["llm_non_rag"].get("confidence"),
             "latency_ms": results["llm_non_rag"]["latency_ms"],
             "cost_usd": results["llm_non_rag"]["cost_usd"],
+            "test_accuracy": None,
             "error": results["llm_non_rag"].get("error"),
         },
         {
             "system": "LLM RAG",
             "priority": results["llm_rag"].get("label"),
-            "confidence": None,
+            "confidence": results["llm_rag"].get("confidence"),
             "latency_ms": results["llm_rag"]["latency_ms"],
             "cost_usd": results["llm_rag"]["cost_usd"],
+            "test_accuracy": None,
             "error": results["llm_rag"].get("error"),
         },
     ]
@@ -303,9 +319,10 @@ def analyze_support_tweet(tweet: str) -> dict[str, Any]:
             err = str(e)[:200]
         latency_ms = (time.perf_counter() - t0) * 1000
         label = extract_priority_from_text(out_text) if not err else None
+        llm_conf = extract_confidence_from_text(out_text) if not err else None
         results[key] = {
             "label": label,
-            "confidence": None,
+            "confidence": llm_conf,
             "raw_output": out_text if not err else None,
             "latency_ms": round(latency_ms, 3),
             "cost_usd": round(cost, 6),
@@ -314,7 +331,7 @@ def analyze_support_tweet(tweet: str) -> dict[str, Any]:
         log_system_result(
             key,
             label=label,
-            confidence=None,
+            confidence=llm_conf,
             latency_ms=latency_ms,
             cost_usd=cost,
             error=err,
